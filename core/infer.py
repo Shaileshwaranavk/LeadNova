@@ -1,21 +1,12 @@
 import os
 import requests
 import numpy as np
-from transformers import T5Tokenizer, T5ForConditionalGeneration
 
-# ===== 1️⃣ Model Path =====
-MODEL_PATH = "./Sales_pitch/sales_model" if os.path.exists("./Sales_pitch/sales_model") else "google/flan-t5-small"
-print(f"🔍 Using model from: {MODEL_PATH}")
-
-# ===== 2️⃣ Load Model =====
-tokenizer = T5Tokenizer.from_pretrained(MODEL_PATH)
-model = T5ForConditionalGeneration.from_pretrained(MODEL_PATH)
-
-# ===== 3️⃣ Load Groq API Key =====
+# ===== 1️⃣ Load Groq API Key =====
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 
-# ===== 4️⃣ Feature Analysis =====
+# ===== 2️⃣ Feature Analysis =====
 def analyze_features(product_name, description, features):
     feature_list = [f.strip() for f in features.split(",") if f.strip()]
     if not feature_list:
@@ -37,7 +28,7 @@ def analyze_features(product_name, description, features):
     return {"weightage": weightage_text, "highlighted": highlighted_text}
 
 
-# ===== 5️⃣ Generate Pitch via Groq =====
+# ===== 3️⃣ Generate Pitch via Groq =====
 def generate_sales_pitch(product_name, description, highlighted_features):
     if not GROQ_API_KEY:
         return "⚠️ Missing GROQ_API_KEY environment variable."
@@ -72,8 +63,16 @@ def generate_sales_pitch(product_name, description, highlighted_features):
         return f"⚠️ API Error: {e}"
 
 
-# ===== 6️⃣ Recommendation Pipeline =====
+# ===== 4️⃣ Recommendation Pipeline (Lazy model load) =====
 def generate_recommendation(product_name, description, features):
+    from transformers import T5Tokenizer, T5ForConditionalGeneration
+    import torch
+
+    # Lazy load: only when function runs
+    model_path = "./core/sales_model"
+    tokenizer = T5Tokenizer.from_pretrained(model_path)
+    model = T5ForConditionalGeneration.from_pretrained(model_path)
+
     analysis = analyze_features(product_name, description, features)
 
     prompt = f"""
@@ -89,26 +88,22 @@ def generate_recommendation(product_name, description, features):
 
     pitch = generate_sales_pitch(product_name, description, analysis["highlighted"])
 
+    # Clean feature text for JSON
+    formatted_weightage = analysis["weightage"].replace("\n", " | ")
+
     return {
-        "feature_weightage": analysis["weightage"],
+        "product": product_name,
+        "feature_weightage": formatted_weightage,
         "highlighted_features": analysis["highlighted"],
-        "llm_feature_insight": llm_insight,
+        "llm_insight": llm_insight,
         "sales_pitch": pitch,
     }
 
 
-# ===== 7️⃣ Interactive One-Product Input =====
 if __name__ == "__main__":
-    print("\n💡 Interactive Sales Pitch Generator (Single Product Mode)\n")
-
-    product_name = input("Enter Product Name: ").strip()
-    description = input("Enter Product Description: ").strip()
-    features = input("Enter Features (comma-separated): ").strip()
-
-    print("\n🔍 Generating sales pitch...\n")
-    result = generate_recommendation(product_name, description, features)
-
-    print("\n🔍 Feature Weightage:\n", result["feature_weightage"])
-    print("\n✨ Highlighted Features:", result["highlighted_features"])
-    print("\n🧠 Model Insight:", result["llm_feature_insight"])
-    print("\n💬 Sales Pitch:\n", result["sales_pitch"])
+    print("\n💡 Interactive Sales Pitch Generator\n")
+    product = input("Product Name: ")
+    desc = input("Product Description: ")
+    feats = input("Features (comma-separated): ")
+    res = generate_recommendation(product, desc, feats)
+    print("\n✅ Result:\n", res)
