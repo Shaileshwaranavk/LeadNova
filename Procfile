@@ -1,1 +1,1 @@
-web: gunicorn SalesInsight.wsgi:application
+gunicorn SalesInsight.wsgi:application --bind 0.0.0.0:$PORT
