@@ -1,45 +1,46 @@
-from transformers import T5Tokenizer, T5ForConditionalGeneration
-import torch
+import os
+from gradio_client import Client
 
-# Lazy global cache
-_model = None
-_tokenizer = None
+# ==============================================================
+# 🌐 HUGGING FACE SPACE INFERENCE HELPER
+# ==============================================================
 
-def load_sales_model(model_path="./core/sales_model"):
-    global _model, _tokenizer
-    if _model is None or _tokenizer is None:
-        print("🔄 Loading T5 model into memory (once)...")
-        _tokenizer = T5Tokenizer.from_pretrained(model_path)
-        _model = T5ForConditionalGeneration.from_pretrained(model_path)
-        _model = _model.to("cpu")  # ensure not trying to use GPU
-    return _model, _tokenizer
+# Your Space endpoint — replace if you rename it later
+INFER_API_URL = os.getenv(
+    "INFER_API_URL",
+    "https://shaileshwaran-sales-pitch-infer.hf.space"
+)
 
-
-def generate_recommendation(product_name, description, features):
-    model, tokenizer = load_sales_model()
-
-    analysis = analyze_features(product_name, description, features)
-
-    prompt = f"""
-    Product: {product_name}
-    Description: {description}
-    Features: {features}
-    Generate a brief insight about which features appeal most to target customers.
+def generate_remote_recommendation(product_name, description, features):
     """
+    Calls the Hugging Face Space (Gradio app) using Gradio Client.
+    """
+    try:
+        # Connect to the Space
+        client = Client(INFER_API_URL)
 
-    inputs = tokenizer(prompt, return_tensors="pt", truncation=True)
-    with torch.no_grad():
-        outputs = model.generate(**inputs, max_length=128)
-    llm_insight = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        # Call the Gradio function (matches your app.py inputs order)
+        result = client.predict(
+            product_name,
+            description,
+            features,
+            api_name="/predict"  # Default API route created by Gradio Interface
+        )
 
-    pitch = generate_sales_pitch(product_name, description, analysis["highlighted"])
+        # Gradio returns a list [sales_pitch, llm_insight, highlighted_features, feature_weightage]
+        return {
+            "sales_pitch": result[0] if len(result) > 0 else "",
+            "llm_insight": result[1] if len(result) > 1 else "",
+            "highlighted_features": result[2] if len(result) > 2 else "",
+            "feature_weightage": result[3] if len(result) > 3 else "",
+        }
 
-    formatted_weightage = analysis["weightage"].replace("\n", " | ")
-
-    return {
-        "product": product_name,
-        "feature_weightage": formatted_weightage,
-        "highlighted_features": analysis["highlighted"],
-        "llm_insight": llm_insight,
-        "sales_pitch": pitch,
-    }
+    except Exception as e:
+        print("❌ Remote inference error:", e)
+        return {
+            "error": str(e),
+            "sales_pitch": "",
+            "llm_insight": "",
+            "highlighted_features": "",
+            "feature_weightage": ""
+        }
