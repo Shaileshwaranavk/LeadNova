@@ -4,6 +4,7 @@ from core.infer import generate_remote_recommendation
 from core.model_pipeline import analyze_leads_remote
 import traceback
 
+
 class SalesPitchAPI(APIView):
     def post(self, request):
         try:
@@ -21,18 +22,36 @@ class SalesPitchAPI(APIView):
             traceback.print_exc()
             return Response({"error": str(e)}, status=500)
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from core.model_pipeline import analyze_leads_remote
+import traceback
 
 class LeadAnalysisAPI(APIView):
     def post(self, request):
         try:
+            # 🔍 Debug info
+            print("🧩 FILES RECEIVED:", request.FILES.keys())
+            print("📦 DATA RECEIVED:", request.data)
+
             product_name = request.data.get("product_name", "").strip()
             description = request.data.get("description", "").strip()
             features = request.data.get("features", "").strip()
-            labeled_file = request.FILES.get("labeled_data")
-            new_file = request.FILES.get("new_data")
+
+            # 🔑 Accept both key name styles
+            labeled_file = (
+                request.FILES.get("labeled_csv")
+                or request.FILES.get("labeled_data")
+                or request.FILES.get("labeled")
+            )
+            new_file = (
+                request.FILES.get("new_csv")
+                or request.FILES.get("new_data")
+                or request.FILES.get("new")
+            )
 
             if not new_file:
-                return Response({"error": "new_data CSV is required"}, status=400)
+                return Response({"error": "new_csv file is required"}, status=400)
 
             result = analyze_leads_remote(
                 product_name=product_name,
