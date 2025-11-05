@@ -215,33 +215,68 @@ class CRMDashboardStatsAPI(APIView):
 
 
 class CRMChartDataAPI(APIView):
-    permission_classes = [IsAuthenticated]
+    """Return charts scoped only to logged-in company"""
 
     def get(self, request):
         try:
-            customers = Customer.objects.filter(owner=request.user)
+            user = request.user
+            if not user.is_authenticated:
+                return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            # Revenue distribution
-            revenue_ranges = [
-                {'range': '0-10k', 'count': customers.filter(revenue_potential__lt=10000).count()},
-                {'range': '10k-50k', 'count': customers.filter(revenue_potential__gte=10000, revenue_potential__lt=50000).count()},
-                {'range': '50k-100k', 'count': customers.filter(revenue_potential__gte=50000, revenue_potential__lt=100000).count()},
-                {'range': '100k+', 'count': customers.filter(revenue_potential__gte=100000).count()},
+            # 🔒 Filter all data to this company's customers
+            customers = Customer.objects.filter(owner=user)
+
+            if not customers.exists():
+                return Response({
+                    "daily_conversions": [],
+                    "top_industries": [],
+                    "revenue_distribution": [],
+                    "total_revenue_potential": 0,
+                    "message": "No customer data available for this company."
+                }, status=200)
+
+            # --- Daily conversion trend (7 days)
+            end_date = datetime.now().date()
+            start_date = end_date - timedelta(days=6)
+            daily_data = []
+            for i in range(7):
+                date = start_date + timedelta(days=i)
+                avg_conversion = customers.aggregate(avg_rate=Avg("conversion_rate"))["avg_rate"] or 0
+                daily_data.append({
+                    "date": date.strftime("%a"),
+                    "conversion_rate": round(avg_conversion * 100, 1)
+                })
+
+            # --- Top 5 industries by average conversion rate
+            top_industries = (
+                customers.values("industry")
+                .annotate(avg_conversion=Avg("conversion_rate"), count=Count("id"))
+                .filter(industry__isnull=False)
+                .order_by("-avg_conversion")[:5]
+            )
+
+            # --- Revenue distribution (by ranges)
+            revenue_distribution = [
+                {"range": "0–10k", "count": customers.filter(revenue_potential__lt=10000).count()},
+                {"range": "10k–50k", "count": customers.filter(revenue_potential__gte=10000, revenue_potential__lt=50000).count()},
+                {"range": "50k–100k", "count": customers.filter(revenue_potential__gte=50000, revenue_potential__lt=100000).count()},
+                {"range": "100k+", "count": customers.filter(revenue_potential__gte=100000).count()},
             ]
 
-            top_industries = customers.values('industry').annotate(
-                avg_conversion=Avg('conversion_rate'),
-                count=Count('customer_id')
-            ).filter(industry__isnull=False).order_by('-avg_conversion')[:5]
+            # --- Total revenue potential
+            total_revenue = customers.aggregate(total=Sum("revenue_potential"))["total"] or 0
 
             return Response({
-                'top_industries': list(top_industries),
-                'revenue_distribution': revenue_ranges,
-                'total_revenue_potential': customers.aggregate(total=Sum('revenue_potential'))['total'] or 0
+                "daily_conversions": daily_data,
+                "top_industries": list(top_industries),
+                "revenue_distribution": revenue_distribution,
+                "total_revenue_potential": round(total_revenue, 2)
             }, status=200)
+
         except Exception as e:
             traceback.print_exc()
             return Response({"error": str(e)}, status=500)
+
 
 
 # ============================================================
