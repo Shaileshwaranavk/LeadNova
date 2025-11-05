@@ -1,16 +1,416 @@
 <!DOCTYPE html>
-    <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Go Live Server - Proyecto</title>
-        <link rel="stylesheet" href="/style/styles.css">
-    </head>
-    <body>
-        <h1>¡Bienvenido a Go Live Server!</h1>
-        <p>Tu servidor de desarrollo está funcionando correctamente.</p>
-        <p>Edita este archivo en <code>views/index.html</code> para comenzar.</p>
-        
-    </body>
-    </html>
-      
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeadNova - AI-Powered Lead Analysis</title>
+  <style>
+    /* --- Theme --- */
+    :root {
+      --primary: #21808d;
+      --primary-hover: #1b6c78;
+      --background: #f9fafb;
+      --surface: #ffffff;
+      --text: #1f2937;
+      --text-secondary: #6b7280;
+      --border: #e5e7eb;
+      --radius: 10px;
+      --space: 16px;
+      --error: #c0152f;
+    }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--background);
+      color: var(--text);
+      line-height: 1.6;
+      padding: var(--space);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.4rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+    }
+
+    .tabs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+
+    .tab {
+      border: none;
+      background: none;
+      font-size: 1rem;
+      padding: 10px 20px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      border-bottom: 3px solid transparent;
+      transition: 0.2s;
+    }
+
+    .tab.active {
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 2rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 500;
+      transition: 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .loading {
+      text-align: center;
+      display: none;
+    }
+
+    .loading.active {
+      display: block;
+    }
+
+    .spinner {
+      border: 3px solid #ddd;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .error {
+      background: rgba(192, 21, 47, 0.1);
+      color: var(--error);
+      border: 1px solid var(--error);
+      padding: 12px;
+      border-radius: var(--radius);
+      margin-top: 12px;
+      display: none;
+    }
+
+    .error.active {
+      display: block;
+    }
+
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    .results-table th,
+    .results-table td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    .results-table th {
+      background: rgba(33, 128, 141, 0.1);
+      font-weight: 600;
+    }
+
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .two-column {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* --- Sales Pitch Styling --- */
+    .pitch-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 1rem;
+    }
+
+    .pitch-section h3 {
+      color: var(--primary);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+    }
+
+    .pitch-section ul {
+      list-style-type: "• ";
+      margin-left: 1.5rem;
+    }
+
+    .highlight-box {
+      background: rgba(33, 128, 141, 0.05);
+      padding: 16px;
+      border-left: 4px solid var(--primary);
+      border-radius: var(--radius);
+      line-height: 1.7;
+      margin-bottom: 1rem;
+    }
+
+    .highlight-key {
+      font-weight: 600;
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>LeadNova</h1>
+    <p class="subtitle">AI-Powered Lead Analysis & Sales Pitch Generator</p>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="lead-analysis">Lead Analysis</button>
+      <button class="tab" data-tab="sales-pitch">Sales Pitch Generator</button>
+    </div>
+
+    <!-- Lead Analysis -->
+    <div id="lead-analysis" class="tab-content active">
+      <div class="card">
+        <form id="lead-form">
+          <label>Product Name *</label>
+          <input type="text" id="lead-product-name" required />
+          <label>Description *</label>
+          <textarea id="lead-description" required></textarea>
+          <label>Features (comma separated)</label>
+          <textarea id="lead-features"></textarea>
+          <div class="two-column">
+            <div>
+              <label>Labeled CSV (optional)</label>
+              <input type="file" id="labeled-csv" accept=".csv" />
+            </div>
+            <div>
+              <label>New Leads CSV *</label>
+              <input type="file" id="new-csv" accept=".csv" required />
+            </div>
+          </div>
+          <button class="btn" type="submit">Analyze Leads</button>
+        </form>
+        <div class="loading" id="lead-loading"><div class="spinner"></div><p>Analyzing leads...</p></div>
+        <div class="error" id="lead-error"></div>
+        <div id="lead-result" style="margin-top: 20px"></div>
+      </div>
+    </div>
+
+    <!-- Sales Pitch -->
+    <div id="sales-pitch" class="tab-content">
+      <div class="card">
+        <form id="pitch-form">
+          <label>Product Name *</label>
+          <input type="text" id="pitch-product-name" required />
+          <label>Description *</label>
+          <textarea id="pitch-description" required></textarea>
+          <label>Features</label>
+          <textarea id="pitch-features"></textarea>
+          <button class="btn" type="submit">Generate Sales Pitch</button>
+        </form>
+        <div class="loading" id="pitch-loading"><div class="spinner"></div><p>Generating pitch...</p></div>
+        <div class="error" id="pitch-error"></div>
+        <div id="pitch-result" style="margin-top: 20px"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "https://leadnova.onrender.com/api";
+
+    // Tabs
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+        tab.classList.add("active");
+        document.getElementById(tab.dataset.tab).classList.add("active");
+      });
+    });
+
+    // Lead Analysis
+    document.getElementById("lead-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const loading = document.getElementById("lead-loading");
+      const error = document.getElementById("lead-error");
+      const result = document.getElementById("lead-result");
+      loading.classList.add("active");
+      error.classList.remove("active");
+      result.innerHTML = "";
+
+      const formData = new FormData();
+      formData.append("product_name", document.getElementById("lead-product-name").value);
+      formData.append("description", document.getElementById("lead-description").value);
+      formData.append("features", document.getElementById("lead-features").value);
+      const labeled = document.getElementById("labeled-csv").files[0];
+      const newFile = document.getElementById("new-csv").files[0];
+      if (labeled) formData.append("labeled_csv", labeled);
+      if (newFile) formData.append("new_csv", newFile);
+
+      try {
+        const res = await fetch(`${API_BASE}/lead-analysis/`, { method: "POST", body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed");
+        displayLeadResults(data);
+      } catch (err) {
+        error.textContent = `Error: ${err.message}`;
+        error.classList.add("active");
+      } finally {
+        loading.classList.remove("active");
+      }
+    });
+
+    function displayLeadResults(data) {
+      const container = document.getElementById("lead-result");
+      container.innerHTML = "";
+      const grid = document.createElement("div");
+      grid.className = "two-column";
+
+      if (data.ml?.top_leads?.length) {
+        grid.innerHTML += `
+          <div>
+            <h3>🧠 ML Predictions</h3>
+            <table class="results-table">
+              <thead><tr><th>Lead ID</th><th>ML Score</th></tr></thead>
+              <tbody>${data.ml.top_leads.map(x =>
+                `<tr><td>${x.Lead_ID}</td><td>${x.Predicted_Conversion_Score_ML.toFixed(2)}</td></tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`;
+      }
+
+      if (data.ai?.top_leads?.length) {
+        grid.innerHTML += `
+          <div>
+            <h3>🤖 AI Insights</h3>
+            <table class="results-table">
+              <thead><tr><th>Lead ID</th><th>AI Score</th><th>Explanation</th></tr></thead>
+              <tbody>${data.ai.top_leads.map(x =>
+                `<tr><td>${x.Lead_ID}</td><td>${x.Predicted_Conversion_Score_AI.toFixed(2)}</td><td>${x.Explanation || '-'}</td></tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`;
+      }
+      container.appendChild(grid);
+    }
+
+    // Sales Pitch
+    document.getElementById("pitch-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const loading = document.getElementById("pitch-loading");
+      const error = document.getElementById("pitch-error");
+      const result = document.getElementById("pitch-result");
+      loading.classList.add("active");
+      error.classList.remove("active");
+      result.innerHTML = "";
+
+      const payload = {
+        product_name: document.getElementById("pitch-product-name").value,
+        description: document.getElementById("pitch-description").value,
+        features: document.getElementById("pitch-features").value
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/sales-pitch/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed");
+        displayPitch(data);
+      } catch (err) {
+        error.textContent = `Error: ${err.message}`;
+        error.classList.add("active");
+      } finally {
+        loading.classList.remove("active");
+      }
+    });
+
+    function displayPitch(data) {
+      const container = document.getElementById("pitch-result");
+      container.innerHTML = `
+        <div class="pitch-section">
+          <h3>✨ Sales Pitch</h3>
+          <div class="highlight-box">${data.sales_pitch || "No pitch generated."}</div>
+        </div>
+        <div class="pitch-section">
+          <h3>🧠 LLM Insights</h3>
+          <div>${formatLLMText(data.llm_insight || "")}</div>
+        </div>
+        <div class="pitch-section">
+          <h3>🔥 Highlighted Features</h3>
+          <p><span class="highlight-key">${data.highlighted_features || "-"}</span></p>
+        </div>
+        <div class="pitch-section">
+          <h3>📊 Feature Weightage</h3>
+          <p>${data.feature_weightage || "-"}</p>
+        </div>`;
+    }
+
+    function formatLLMText(text) {
+      if (!text) return "<p>No insights available.</p>";
+      return text
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\n\n/g, "</p><p>")
+        .replace(/\n/g, "<br>")
+        .replace(/(\d+\. )/g, "<br><strong>$1</strong>")
+        .replace(/^/, "<p>")
+        .concat("</p>");
+    }
+  </script>
+</body>
+</html>

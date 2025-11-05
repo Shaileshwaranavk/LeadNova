@@ -65,3 +65,114 @@ class LeadAnalysisAPI(APIView):
         except Exception as e:
             traceback.print_exc()
             return Response({"error": str(e)}, status=500)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Customer, CustomerReview, ModelFeedback
+from .CRM_Trainer import analyze_leads_from_db, generate_sales_pitch, retrain_from_feedback
+from django.db.models import Avg
+import json
+import traceback
+
+
+# 🧩 --- CRM Dashboard APIs ---
+
+
+class CRMLeadAnalyzerAPI(APIView):
+    """Analyze all customers using Hugging Face Lead Analyzer"""
+
+    def get(self, request):
+        try:
+            result = analyze_leads_from_db()
+            return Response(result, status=200)
+        except Exception as e:
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=500)
+
+
+class CRMSalesPitchAPI(APIView):
+    """Generate a custom AI Sales Pitch using Hugging Face"""
+
+    def post(self, request):
+        try:
+            data = request.data
+            product = data.get("product_name", "")
+            description = data.get("description", "")
+            features = data.get("features", "")
+            if not product or not description:
+                return Response({"error": "Missing product_name or description"}, status=400)
+            result = generate_sales_pitch(product, description, features)
+            return Response(result, status=200)
+        except Exception as e:
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=500)
+
+
+class CRMReviewAPI(APIView):
+    """Add a customer review to the CRM"""
+
+    def post(self, request):
+        try:
+            data = request.data
+            customer_id = data.get("customer_id")
+            text = data.get("review_text")
+
+            if not (customer_id and text):
+                return Response({"error": "Missing customer_id or review_text"}, status=400)
+
+            customer = Customer.objects.get(customer_id=customer_id)
+            review = CustomerReview.objects.create(customer=customer, review_text=text)
+            return Response({"status": "Review saved", "id": review.id}, status=201)
+        except Exception as e:
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=500)
+
+
+class CRMFeedbackAPI(APIView):
+    """Submit user feedback for model improvement"""
+
+    def post(self, request):
+        try:
+            data = request.data
+            model_name = data.get("model_name")
+            feedback_text = data.get("feedback_text")
+            rating = data.get("rating", 0)
+            fb = ModelFeedback.objects.create(model_name=model_name, feedback_text=feedback_text, rating=rating)
+            return Response({"status": "Feedback saved", "id": fb.id}, status=201)
+        except Exception as e:
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=500)
+
+
+class CRMModelRetrainAPI(APIView):
+    """Trigger CRM retraining process (stub or background)"""
+
+    def post(self, request):
+        try:
+            result = retrain_from_feedback()
+            return Response(result, status=200)
+        except Exception as e:
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=500)
+
+
+class CRMDashboardStatsAPI(APIView):
+    """Return CRM metrics for dashboard overview"""
+
+    def get(self, request):
+        try:
+            total_customers = Customer.objects.count()
+            total_reviews = CustomerReview.objects.count()
+            avg_conversion = (
+                Customer.objects.aggregate(avg_rate=Avg("conversion_rate"))["avg_rate"] or 0
+            )
+
+            data = {
+                "total_customers": total_customers,
+                "total_reviews": total_reviews,
+                "average_conversion_rate": round(avg_conversion, 2),
+            }
+            return Response(data, status=200)
+        except Exception as e:
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=500)
