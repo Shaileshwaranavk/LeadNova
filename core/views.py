@@ -176,3 +176,58 @@ class CRMDashboardStatsAPI(APIView):
         except Exception as e:
             traceback.print_exc()
             return Response({"error": str(e)}, status=500)
+
+from django.db.models import Count, Avg, Sum
+from datetime import datetime, timedelta
+
+class CRMChartDataAPI(APIView):
+    def get(self, request):
+        try:
+            from core.models import Customer
+            
+            # Last 7 days conversion data
+            end_date = datetime.now().date()
+            start_date = end_date - timedelta(days=6)
+            
+            daily_data = []
+            for i in range(7):
+                date = start_date + timedelta(days=i)
+                day_name = date.strftime('%a')
+                
+                # Calculate average conversion for all customers
+                # (In production, filter by date if you have timestamps)
+                avg_conversion = Customer.objects.aggregate(
+                    avg_rate=Avg('conversion_rate')
+                )['avg_rate'] or 0
+                
+                daily_data.append({
+                    'date': day_name,
+                    'conversion_rate': round(avg_conversion * 100, 1)
+                })
+            
+            # Top industries
+            top_industries = Customer.objects.values('industry').annotate(
+                avg_conversion=Avg('conversion_rate'),
+                count=Count('customer_id')
+            ).filter(industry__isnull=False).order_by('-avg_conversion')[:5]
+            
+            # Revenue distribution
+            revenue_ranges = [
+                {'range': '0-10k', 'count': Customer.objects.filter(revenue_potential__lt=10000).count()},
+                {'range': '10k-50k', 'count': Customer.objects.filter(revenue_potential__gte=10000, revenue_potential__lt=50000).count()},
+                {'range': '50k-100k', 'count': Customer.objects.filter(revenue_potential__gte=50000, revenue_potential__lt=100000).count()},
+                {'range': '100k+', 'count': Customer.objects.filter(revenue_potential__gte=100000).count()},
+            ]
+            
+            return Response({
+                'daily_conversions': daily_data,
+                'top_industries': list(top_industries),
+                'revenue_distribution': revenue_ranges,
+                'total_revenue_potential': Customer.objects.aggregate(
+                    total=Sum('revenue_potential')
+                )['total'] or 0
+            }, status=200)
+            
+        except Exception as e:
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=500)

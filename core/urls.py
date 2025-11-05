@@ -8,6 +8,7 @@ from .views import (
     CRMFeedbackAPI,
     CRMModelRetrainAPI,
     CRMDashboardStatsAPI,
+    CRMChartDataAPI,
 )
 
 urlpatterns = [
@@ -22,4 +23,5 @@ urlpatterns = [
     path("crm/submit-feedback/", CRMFeedbackAPI.as_view(), name="crm_submit_feedback"),
     path("crm/retrain-models/", CRMModelRetrainAPI.as_view(), name="crm_retrain_models"),
     path("crm/dashboard-stats/", CRMDashboardStatsAPI.as_view(), name="crm_dashboard_stats"),
+    path("crm/chart-data/", CRMChartDataAPI.as_view(), name="crm_chart_data"),
 ]
